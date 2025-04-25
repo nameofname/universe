@@ -2,6 +2,8 @@ import type {
   FederationRuntimePlugin,
   FederationHost,
 } from '@module-federation/runtime';
+import { Response } from 'node-fetch';
+
 type WebpackRequire = {
   (id: string): any;
   u: (chunkId: string) => string;
@@ -125,7 +127,6 @@ export const loadFromFs = (
     callback(new Error(`File ${filename} does not exist`), null);
   }
 };
-
 // Hoisted utility function to fetch and execute chunks from remote URLs
 export const fetchAndRun = (
   url: URL,
@@ -133,18 +134,24 @@ export const fetchAndRun = (
   callback: (err: Error | null, chunk: any) => void,
   args: any,
 ): void => {
-  (typeof fetch === 'undefined'
+  const createFetchError = (e: Error) =>
+    new Error(`Error while fetching from URL: ${url}`, { cause: e });
+  let responseObject: Response | undefined;
+  (typeof (global as any).fetch === 'undefined'
     ? importNodeModule<typeof import('node-fetch')>('node-fetch').then(
         (mod) => mod.default,
       )
-    : Promise.resolve(fetch)
+    : Promise.resolve((global as any).fetch)
   )
     .then((fetchFunction) => {
       return args.origin.loaderHook.lifecycle.fetch
         .emit(url.href, {})
         .then((res: Response | null) => {
           if (!res || !(res instanceof Response)) {
-            return fetchFunction(url.href).then((response) => response.text());
+            return fetchFunction(url.href).then((response: Response) => {
+              responseObject = response;
+              return response.text();
+            });
           }
           return res.text();
         });
@@ -160,10 +167,14 @@ export const fetchAndRun = (
         );
         callback(null, chunk);
       } catch (e) {
-        callback(e as Error, null);
+        console.log('Response object for failed MF request :', responseObject);
+        callback(createFetchError(e as Error), null);
       }
     })
-    .catch((err: Error) => callback(err, null));
+    .catch((err: Error) => {
+      console.log('Response object for failed MF request :', responseObject);
+      return callback(createFetchError(err as Error), null);
+    });
 };
 
 // Hoisted utility function to resolve URLs for chunks

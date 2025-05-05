@@ -127,6 +127,24 @@ export const loadFromFs = (
     callback(new Error(`File ${filename} does not exist`), null);
   }
 };
+
+// Hoisted utility function throws detailed error on failed request
+function processResponse(response: Response) {
+  if (response.ok) {
+    return response.text();
+  }
+  const keys: string[] = Object.keys(Object.getPrototypeOf(response));
+  const obj: Record<string, any> = keys.reduce(
+    (acc, key) =>
+      Object.assign(acc, { [key]: response[key as keyof Response] }),
+    {},
+  );
+  obj['headers'] = Object.fromEntries(obj['headers']);
+  throw new Error(
+    `Recieved response code: ${response.status}\n Response details: ${JSON.stringify(obj, null, 2)}`,
+  );
+}
+
 // Hoisted utility function to fetch and execute chunks from remote URLs
 export const fetchAndRun = (
   url: URL,
@@ -150,10 +168,10 @@ export const fetchAndRun = (
           if (!res || !(res instanceof Response)) {
             return fetchFunction(url.href).then((response: Response) => {
               responseObject = response;
-              return response.text();
+              return processResponse(response);
             });
           }
-          return res.text();
+          return processResponse(res);
         });
     })
     .then((data) => {
@@ -167,12 +185,10 @@ export const fetchAndRun = (
         );
         callback(null, chunk);
       } catch (e) {
-        console.log('Response object for failed MF request :', responseObject);
         callback(createFetchError(e as Error), null);
       }
     })
     .catch((err: Error) => {
-      console.log('Response object for failed MF request :', responseObject);
       return callback(createFetchError(err as Error), null);
     });
 };

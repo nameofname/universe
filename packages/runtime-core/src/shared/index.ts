@@ -520,6 +520,17 @@ export class SharedHandler {
       const registeredShared = this.shareScopeMap[sc][pkgName][version];
       if (loading && !registeredShared.loading) {
         registeredShared.loading = loading;
+        // allow retries by setting loading to false, see this.loadShared
+        registeredShared.loading.catch((err) => {
+          console.warn(
+            `Failed to fetch share ${pkgName}`,
+            registeredShared,
+            err,
+          );
+          delete registeredShared.loading;
+          registeredShared.loaded = false;
+          throw err;
+        });
       }
     });
   }

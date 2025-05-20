@@ -13,6 +13,7 @@ import {
 } from '@module-federation/sdk';
 import { warn } from './utils/logger';
 import { FederationRuntimePlugin } from './type/plugin';
+import { getBuilderId } from './utils';
 
 export interface Federation {
   __GLOBAL_PLUGIN__: Array<FederationRuntimePlugin>;
@@ -108,10 +109,16 @@ setGlobalDefaultVal(nativeGlobal);
 
 export function resetFederationGlobalInfo(): void {
   CurrentGlobal.__FEDERATION__.__GLOBAL_PLUGIN__ = [];
-  CurrentGlobal.__FEDERATION__.__INSTANCES__ = [];
   CurrentGlobal.__FEDERATION__.moduleInfo = {};
   CurrentGlobal.__FEDERATION__.__SHARE__ = {};
   CurrentGlobal.__FEDERATION__.__MANIFEST_LOADING__ = {};
+  const hostFederationInstance =
+    CurrentGlobal.__FEDERATION__.__INSTANCES__.find((instance) => {
+      return instance.options.id === getBuilderId();
+    });
+  CurrentGlobal.__FEDERATION__.__INSTANCES__ = hostFederationInstance
+    ? [hostFederationInstance]
+    : [];
 
   Object.keys(globalLoading).forEach((key) => {
     delete globalLoading[key];

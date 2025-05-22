@@ -1,8 +1,11 @@
 import { getAllKnownRemotes } from './flush-chunks';
 import crypto from 'crypto';
 import helpers from '@module-federation/runtime/helpers';
+import { init } from '@module-federation/runtime';
 import path from 'path';
 import { Response } from 'node-fetch';
+import { setGlobalFederationInstance } from '@module-federation/runtime-core';
+import { FederationHost } from '@module-federation/runtime-core';
 
 declare global {
   var mfHashMap: Record<string, string> | undefined;
@@ -159,7 +162,15 @@ export const performReload = async (
   });
   //@ts-ignore
   __webpack_require__?.federation?.instance?.moduleCache?.clear();
+  const localFederationInstance = helpers.global.getGlobalFederationInstance();
   helpers.global.resetFederationGlobalInfo();
+  if (localFederationInstance?.initialUserOptions) {
+    init(localFederationInstance?.initialUserOptions);
+  } else if (localFederationInstance instanceof FederationHost) {
+    console.warn(`Unable to locate contextual federation instance after hot reload, 
+      falling back to previous federation instance, asset reloading may not work.`);
+    setGlobalFederationInstance(localFederationInstance);
+  }
   globalThis.moduleGraphDirty = false;
   globalThis.mfHashMap = {};
 

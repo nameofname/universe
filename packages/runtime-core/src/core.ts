@@ -37,6 +37,7 @@ import { formatShareConfigs } from './utils/share';
 
 export class FederationHost {
   options: Options;
+  initialUserOptions: UserOptions;
   hooks = new PluginSystem({
     beforeInit: new SyncWaterfallHook<{
       userOptions: UserOptions;
@@ -173,6 +174,7 @@ export class FederationHost {
 
     this.name = userOptions.name;
     this.options = defaultOptions;
+    this.initialUserOptions = userOptions;
     this.snapshotHandler = new SnapshotHandler(this);
     this.sharedHandler = new SharedHandler(this);
     this.remoteHandler = new RemoteHandler(this);

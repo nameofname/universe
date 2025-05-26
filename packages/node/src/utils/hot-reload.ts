@@ -342,6 +342,60 @@ export const revalidate = async (
   });
 };
 
+/**
+ * This function is not part of the module federation public API and was created for
+ * use with NukedFramework
+ * @returns
+ */
+export const getShouldRevalidate = async (): Promise<
+  Record<string, boolean>
+> => {
+  const fetchModule: any = getFetchModule();
+  const remotesFromAPI = getAllKnownRemotes();
+  // Ignoring medusa config check
+  // ALSO ignoring fake remotes check, that seems to not be used in our application
+  // Note - if we *did* what to check the fake remotes we'd have to refactor that function
+  // looks like it should be async but it's not.
+  return fetchRemoteUpdatesNeeded(remotesFromAPI, fetchModule);
+};
+
+/**
+ * Copy of the above fetchRemote, but instead of resolving to a single boolean value,
+ * we resolve to a map of which remotes need to be refreshed.
+ * @param remoteScope
+ * @param fetchModule
+ * @returns
+ */
+const fetchRemoteUpdatesNeeded = (
+  remoteScope: any,
+  fetchModule: any,
+): Promise<Record<string, boolean>> => {
+  const fetches: Promise<void | boolean>[] = [];
+  const res: Record<string, boolean> = {};
+
+  for (const name in remoteScope) {
+    res[name] = false;
+    const container = remoteScope[name];
+    const url = container.entry;
+    const fetcher = createFetcher(url, fetchModule, name, (hash) => {
+      if (hashmap[name]) {
+        if (hashmap[name] !== hash) {
+          hashmap[name] = hash;
+          res[name] = true;
+          console.log(name, 'hash is different - must hot reload server');
+        }
+      } else {
+        hashmap[name] = hash;
+      }
+    });
+    fetches.push(fetcher);
+  }
+
+  return Promise.all(fetches).then(() => {
+    return res;
+  });
+};
+
 export function getFetchModule(): any {
   //@ts-ignore
   const loadedModule =

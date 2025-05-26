@@ -347,9 +347,8 @@ export const revalidate = async (
  * use with NukedFramework
  * @returns
  */
-export const getShouldRevalidate = async (): Promise<
-  Record<string, boolean>
-> => {
+export type ShouldRevalidateMap = Record<string, boolean>;
+export const getShouldRevalidate = async (): Promise<ShouldRevalidateMap> => {
   const fetchModule: any = getFetchModule();
   const remotesFromAPI = getAllKnownRemotes();
   // Ignoring medusa config check

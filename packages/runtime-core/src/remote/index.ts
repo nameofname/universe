@@ -458,8 +458,9 @@ export class RemoteHandler {
     }
   }
 
-  private removeRemote(remote: Remote): void {
+  public removeRemote(remote: Remote): void {
     try {
+      // remove the remote from the host's options
       const { host } = this;
       const { name } = remote;
       const remoteIndex = host.options.remotes.findIndex(
@@ -468,8 +469,11 @@ export class RemoteHandler {
       if (remoteIndex !== -1) {
         host.options.remotes.splice(remoteIndex, 1);
       }
+      // find the remote module from the host's module cache
+      const module = host.moduleCache.get(name);
       const loadedModule = host.moduleCache.get(remote.name);
       if (loadedModule) {
+        // remove the module from the global
         const remoteInfo = loadedModule.remoteInfo;
         const key = remoteInfo.entryGlobalName as keyof typeof CurrentGlobal;
 
@@ -491,6 +495,7 @@ export class RemoteHandler {
           delete globalLoading[remoteEntryUniqueKey];
         }
 
+        // delete manifest snapshot
         host.snapshotHandler.manifestCache.delete(remoteInfo.entry);
 
         // delete unloaded shared and instance
